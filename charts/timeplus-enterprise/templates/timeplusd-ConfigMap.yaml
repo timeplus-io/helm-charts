@@ -1,0 +1,24 @@
+{{- if .Values.timeplusd.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: timeplusd-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  default-config.yaml: |-
+    logger:
+      level: information
+      log: {{ include "timeplus.logpath" .Values.timeplusd.storage.log.enabled }}/timeplusd-server.log
+      errorlog: {{ include "timeplus.logpath" .Values.timeplusd.storage.log.enabled }}/timeplusd-server.err.log
+      console: 1
+      
+{{ .Files.Get "resources/timeplusd/config.yaml" | indent 4 }}
+
+
+  custom-config.yaml: |-
+{{ if .Values.timeplusd.config }}
+{{ toYaml .Values.timeplusd.config | indent 4 }}
+{{ end }}
+{{- end }}

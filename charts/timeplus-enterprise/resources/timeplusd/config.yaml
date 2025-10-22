@@ -1,0 +1,41 @@
+data:
+  datastore:
+    log:
+      preallocate: false
+      max_entry_size: 104857600
+
+  # below changes from: https://github.com/timeplus-io/gravity/pull/57/files
+  server:
+    # connection_max_idle_ms = 0 means no idle timeout management for connections
+    connection_max_idle_ms: 4000
+
+    # Number of network socket server per IP / Port
+    # The network thread reads requests from the network
+    # and push the request to the request channel / queue
+    network_threads: 8
+
+    # Worker threads which picks up the requests from the request queue
+    # and do the real work. This is per network socket server.
+    # So if the \network_threads = 4 which means 4 network socket server
+    # and \worker_threads = 4, then there will be network_threads * worker_threads = 16
+    # worker threads in total
+    worker_threads: 8
+
+  # All nodes in the cluster will run a meta client since each node
+  # will register against with meta (leader) node
+  client:
+    # Socket related configurations
+    max_connections_per_ip: 8
+
+  raft:
+    tick_interval_ms: 200
+
+metadata:
+  raft:
+    # \tick_interval_ms is the default resolution of the Raft timer for every tick
+    tick_interval_ms: 100
+
+storage_configuration:
+  disks:
+    nativelog_disk:
+      path: /var/lib/timeplusd/nativelog/

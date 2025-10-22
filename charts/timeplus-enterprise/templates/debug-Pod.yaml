@@ -1,0 +1,140 @@
+{{ if .Values.debug.timeplusd.enabled }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: timeplus-debug-timeplusd-0
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: timeplus-debug-timeplusd-0
+spec:
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml .Values.global.imagePullSecrets | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: timeplus-debug-timeplusd-0
+      command: ["/bin/bash", "-c", "--"]
+      args: ["while true; do sleep 30; done;"]
+      {{- if .Values.debug.commonConfig.resources }}
+      resources:
+        {{- toYaml .Values.debug.commonConfig.resources | nindent 8 }}
+      {{- end }}
+      image: {{ include "timeplus.fullImage" .Values.debug.commonConfig }}
+      {{- if .Values.debug.commonConfig.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.debug.commonConfig.imagePullPolicy }}
+      {{- end }}
+      volumeMounts:
+        - name: timeplusd-history
+          mountPath: /timeplus/timeplusd-0/history
+        - name: timeplusd-stream
+          mountPath: /timeplus/timeplusd-0/stream
+        {{- if .Values.timeplusd.storage.log.enabled }}
+        - name: timeplusd-log
+          mountPath: /timeplus/timeplusd-0/log
+        {{- end }}
+  volumes:
+    - name: timeplusd-history
+      persistentVolumeClaim:
+        claimName: timeplusd-history-timeplusd-0
+    - name: timeplusd-stream
+      persistentVolumeClaim:
+        claimName: timeplusd-stream-timeplusd-0
+    {{- if .Values.timeplusd.storage.log.enabled }}
+    - name: timeplusd-log
+      persistentVolumeClaim:
+        claimName: timeplusd-log-timeplusd-0
+    {{- end }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: timeplus-debug-timeplusd-1
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: timeplus-debug-timeplusd-1
+spec:
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml .Values.global.imagePullSecrets | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: timeplus-debug-timeplusd-1
+      command: ["/bin/bash", "-c", "--"]
+      args: ["while true; do sleep 30; done;"]
+      {{- if .Values.debug.commonConfig.resources }}
+      resources:
+        {{- toYaml .Values.debug.commonConfig.resources | nindent 8 }}
+      {{- end }}
+      image: {{ include "timeplus.fullImage" .Values.debug.commonConfig }}
+      {{- if .Values.debug.commonConfig.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.debug.commonConfig.imagePullPolicy }}
+      {{- end }}
+      volumeMounts:
+        - name: timeplusd-history
+          mountPath: /timeplus/timeplusd-1/history
+        - name: timeplusd-stream
+          mountPath: /timeplus/timeplusd-1/stream
+        {{- if .Values.timeplusd.storage.log.enabled }}
+        - name: timeplusd-log
+          mountPath: /timeplus/timeplusd-1/log
+        {{- end }}
+  volumes:
+    - name: timeplusd-history
+      persistentVolumeClaim:
+        claimName: timeplusd-history-timeplusd-1
+    - name: timeplusd-stream
+      persistentVolumeClaim:
+        claimName: timeplusd-stream-timeplusd-1
+    {{- if .Values.timeplusd.storage.log.enabled }}
+    - name: timeplusd-log
+      persistentVolumeClaim:
+        claimName: timeplusd-log-timeplusd-1
+    {{- end }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: timeplus-debug-timeplusd-2
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: timeplus-debug-timeplusd-2
+spec:
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml .Values.global.imagePullSecrets | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: timeplus-debug-timeplusd-2
+      command: ["/bin/bash", "-c", "--"]
+      args: ["while true; do sleep 30; done;"]
+      {{- if .Values.debug.commonConfig.resources }}
+      resources:
+        {{- toYaml .Values.debug.commonConfig.resources | nindent 8 }}
+      {{- end }}
+      image: {{ include "timeplus.fullImage" .Values.debug.commonConfig }}
+      {{- if .Values.debug.commonConfig.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.debug.commonConfig.imagePullPolicy }}
+      {{- end }}
+      volumeMounts:
+        - name: timeplusd-history
+          mountPath: /timeplus/timeplusd-2/history
+        - name: timeplusd-stream
+          mountPath: /timeplus/timeplusd-2/stream
+        {{- if .Values.timeplusd.storage.log.enabled }}
+        - name: timeplusd-log
+          mountPath: /timeplus/timeplusd-2/log
+        {{- end }}
+  volumes:
+    - name: timeplusd-history
+      persistentVolumeClaim:
+        claimName: timeplusd-history-timeplusd-2
+    - name: timeplusd-stream
+      persistentVolumeClaim:
+        claimName: timeplusd-stream-timeplusd-2
+    {{- if .Values.timeplusd.storage.log.enabled }}
+    - name: timeplusd-log
+      persistentVolumeClaim:
+        claimName: timeplusd-log-timeplusd-2
+    {{- end }}
+{{- end }}

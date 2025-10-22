@@ -1,0 +1,22 @@
+apiVersion: v2
+name: timeplus-enterprise
+icon: https://timeplus.io/1_SYMBOL_B.png
+description: Helm chart for deploying a cluster of Timeplus Enterprise.
+type: application
+# This is the chart version. It will be override when packaging so the number here doesn't matter.
+version: 1.0.0
+appVersion: 3.0.1
+kubeVersion: '>= 1.25.0-0'
+keywords:
+  - timeplus
+  - realtime
+  - streaming
+  - analytics
+  - monitoring
+  - SQL
+home: https://www.timeplus.com/
+sources:
+  - https://github.com/timeplus-io/proton
+maintainers:
+  - name: Timeplus engineers
+    email: eng@timeplus.com

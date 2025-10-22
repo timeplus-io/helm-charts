@@ -1,0 +1,26 @@
+{{- if .Values.timeplusd.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: timeplusd-compute-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  default-config.yaml: |-
+    logger:
+      level: information
+      console: 1
+
+    node:
+      roles:
+        "@replace": ""
+        role:
+          - Compute
+
+  custom-config.yaml: |-
+{{ if .Values.timeplusd.computeNode.config }}
+{{ toYaml .Values.timeplusd.computeNode.config | indent 4 }}
+{{ end }}
+
+{{- end }}

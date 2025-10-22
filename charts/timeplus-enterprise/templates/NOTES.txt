@@ -1,0 +1,5 @@
+Your Timeplus Enterprise stack is deployed! It may take a few minutes before all the services are up and running.
+
+{{- if .Values.provision.enabled }}
+You can run `kubectl -n {{ .Release.Namespace }} get jobs` to check whether `timeplus-provision` is completed or not. Once this job is completed, you can start use Timeplus Enterprise.
+{{- end }}

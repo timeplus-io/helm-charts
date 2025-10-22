@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeplusd-compute-node
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusd.labels }}
+    {{- toYaml .Values.timeplusd.labels | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if not .Values.timeplusd.computeNode.autoscaling.enabled }}
+  replicas: {{ .Values.timeplusd.computeNode.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "timeplus.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: timeplusd-compute-node
+  template:
+    metadata:
+      annotations:
+        k8s.timeplus.io/config-sha: {{ include (print $.Template.BasePath "/timeplusd-compute-ConfigMap.yaml") . | sha256sum }}
+        k8s.timeplus.io/user-config-sha: {{ include (print $.Template.BasePath "/timeplusd-user-ConfigMap.yaml") . | sha256sum }}
+      labels:
+        {{- include "timeplus.podLabels" . | nindent 8 }}
+        {{- if .Values.timeplusd.labels }}
+        {{- toYaml .Values.timeplusd.labels | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/component: timeplusd-compute-node
+    spec:
+      {{- dict "global" .Values.global "self" .Values.timeplusd | include "timeplus.nodeAssignment" | nindent 6 }}
+      {{- if .Values.timeplusd.computeNode.nodeSelector }}
+      nodeSelector:
+      {{- toYaml .Values.timeplusd.computeNode.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.timeplusd.securityContext }}
+      securityContext:
+      {{- toYaml .Values.timeplusd.securityContext | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: timeplusd
+        image: {{ include "timeplus.fullImage" .Values.timeplusd }}
+        {{- if .Values.timeplusd.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.timeplusd.imagePullPolicy }}
+        {{- end }}
+        command:
+          - "/entrypoint.sh"
+        ports:
+          - name: metrics
+            containerPort: 9363
+            protocol: TCP
+        {{- if .Values.timeplusd.computeNode.resources }}
+        resources:
+          {{- toYaml .Values.timeplusd.computeNode.resources | nindent 10 }}
+        {{- end }}
+        env:
+        - name: METADATA_NODE_QUORUM
+          value: {{ include "timeplus.metadataNodeQuorum" . }}
+        volumeMounts:
+        - name: timeplusd-compute-config
+          mountPath: /etc/timeplusd-server/config.d/z100-default-config.yaml
+          subPath: default-config.yaml
+        - name: timeplusd-compute-config
+          mountPath: /etc/timeplusd-server/config.d/z300-custom-config.yaml
+          subPath: custom-config.yaml
+        - name: timeplusd-user-config
+          mountPath: /etc/timeplusd-server/users.d/z100-admin-user.yaml
+          subPath: z100-admin-user.yaml
+        - name: timeplusd-user-config
+          mountPath: /etc/timeplusd-server/users.yaml
+          subPath: users.yaml
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorContainer" .Values.prometheus_metrics.vector | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusd.extraContainers }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+      volumes:
+      - name: timeplusd-compute-config
+        configMap:
+          name: timeplusd-compute-config
+          defaultMode: 0777
+      - name: timeplusd-user-config
+        configMap:
+          name: timeplusd-user-config
+          defaultMode: 0777
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorVolume" "connector.toml" | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusd.extraVolumes }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}

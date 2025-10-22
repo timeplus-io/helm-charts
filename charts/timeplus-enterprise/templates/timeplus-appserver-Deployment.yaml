@@ -1,0 +1,103 @@
+{{- if .Values.timeplusAppserver.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeplus-appserver
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusAppserver.labels }}
+    {{- toYaml .Values.timeplusAppserver.labels | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.timeplusAppserver.replicas | default 2 }}
+  selector:
+    matchLabels:
+      {{- include "timeplus.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: timeplus-appserver
+  template:
+    metadata:
+      annotations:
+        k8s.timeplus.io/config-sha: {{ include (print $.Template.BasePath "/timeplus-appserver-ConfigMap.yaml") . | sha256sum }}
+        {{- if .Values.timeplusAppserver.annotations }}
+        {{- toYaml .Values.timeplusAppserver.annotations | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "timeplus.podLabels" . | nindent 8 }}
+        {{- if .Values.timeplusAppserver.labels }}
+        {{- toYaml .Values.timeplusAppserver.labels | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/component: timeplus-appserver
+    spec:
+      {{- dict "global" .Values.global "self" .Values.timeplusAppserver | include "timeplus.nodeAssignment" | nindent 6 }}
+      {{- if .Values.timeplusAppserver.securityContext }}
+      securityContext:
+      {{- toYaml .Values.timeplusAppserver.securityContext | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: timeplus-appserver
+        image: {{ include "timeplus.fullImage" .Values.timeplusAppserver }}
+        {{- if .Values.timeplusAppserver.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.timeplusAppserver.imagePullPolicy }}
+        {{- end }}
+        args:
+        - --config
+        - /timeplus/config/timeplus-appserver.yaml
+        {{- if .Values.timeplusAppserver.resources }}
+        resources:
+          {{- toYaml .Values.timeplusAppserver.resources | nindent 10 }}
+        {{- end }}
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: internal-http
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /default/info
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /timeplus/config
+          name: timeplus-appserver-configs
+          readOnly: true
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorContainer" .Values.prometheus_metrics.vector | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusAppserver.extraContainers }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+      volumes:
+      - name: timeplus-appserver-configs
+        projected:
+          sources:
+          - configMap:
+              name: timeplus-appserver
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorVolume" "appserver.toml" | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusAppserver.extraVolumes }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

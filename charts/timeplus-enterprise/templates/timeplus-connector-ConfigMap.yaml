@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: timeplus-connector
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  server.yaml: |-
+    {{- if .Values.timeplusConnector.configMap }}
+      {{- toYaml .Values.timeplusConnector.configMap | nindent 4 }}
+    {{- end }}

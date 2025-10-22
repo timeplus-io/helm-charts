@@ -1,0 +1,36 @@
+{{- if .Values.timeplusd.computeNode.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: timeplusd-compute-node-hpa
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusd.labels }}
+    {{- toYaml .Values.timeplusd.labels | nindent 4 }}
+    {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: timeplusd-compute-node
+  minReplicas: {{ .Values.timeplusd.computeNode.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.timeplusd.computeNode.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.timeplusd.computeNode.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.timeplusd.computeNode.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.timeplusd.computeNode.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.timeplusd.computeNode.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

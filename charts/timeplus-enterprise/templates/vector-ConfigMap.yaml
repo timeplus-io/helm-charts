@@ -1,0 +1,84 @@
+{{- if .Values.prometheus_metrics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  appserver.toml: |
+    data_dir = "/vector-data-dir"
+
+    [sources.metrics]
+    type = "prometheus_scrape"
+    endpoints = ["http://localhost:8081/api/internal/metrics"]
+    scrape_interval_secs = 15
+    endpoint_tag = "endpoint"
+
+    [transforms.remapped_metric]
+    type   = "remap"
+    inputs = [ "metrics" ]
+    source = """
+    if !exists(.tags) || !is_object(.tags) || is_empty(object!(.tags)) {
+      abort
+    }
+    .tags.pod_name = get_env_var!("VECTOR_SELF_POD_NAME")
+    .tags.namespace = get_env_var!("VECTOR_SELF_NS")
+    """
+
+    [sinks.prometheus]
+    type = "prometheus_remote_write"
+    inputs = [ "remapped_metric" ]
+    endpoint = "{{ .Values.prometheus_metrics.remote_write_endpoint }}/api/v1/write"
+
+  connector.toml: |
+    data_dir = "/vector-data-dir"
+
+    [sources.metrics]
+    type = "prometheus_scrape"
+    endpoints = ["http://localhost:4196/metrics"]
+    scrape_interval_secs = 15
+    endpoint_tag = "endpoint"
+
+    [transforms.remapped_metric]
+    type   = "remap"
+    inputs = [ "metrics" ]
+    source = """
+    if !exists(.tags) || !is_object(.tags) || is_empty(object!(.tags)) {
+      abort
+    }
+    .tags.pod_name = get_env_var!("VECTOR_SELF_POD_NAME")
+    .tags.namespace = get_env_var!("VECTOR_SELF_NS")
+    """
+
+    [sinks.prometheus]
+    type = "prometheus_remote_write"
+    inputs = [ "remapped_metric" ]
+    endpoint = "{{ .Values.prometheus_metrics.remote_write_endpoint }}/api/v1/write"
+
+  timeplusd.toml: |
+    data_dir = "/vector-data-dir"
+
+    [sources.metrics]
+    type = "prometheus_scrape"
+    endpoints = ["http://localhost:9363/metrics"]
+    scrape_interval_secs = 15
+    endpoint_tag = "endpoint"
+
+    [transforms.remapped_metric]
+    type   = "remap"
+    inputs = [ "metrics" ]
+    source = """
+    if !exists(.tags) || !is_object(.tags) || is_empty(object!(.tags)) {
+      abort
+    }
+    .tags.pod_name = get_env_var!("VECTOR_SELF_POD_NAME")
+    .tags.namespace = get_env_var!("VECTOR_SELF_NS")
+    """
+
+    [sinks.prometheus]
+    type = "prometheus_remote_write"
+    inputs = [ "remapped_metric" ]
+    endpoint = "{{ .Values.prometheus_metrics.remote_write_endpoint }}/api/v1/write"
+{{- end }}

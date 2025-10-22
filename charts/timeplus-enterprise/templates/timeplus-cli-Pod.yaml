@@ -1,0 +1,32 @@
+{{- if .Values.timeplusCli.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: timeplus-cli
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusCli.labels }}
+    {{- toYaml .Values.timeplusCli.labels | nindent 4 }}
+    {{- end }}
+spec:
+  {{- dict "global" .Values.global "self" .Values.timeplusCli | include "timeplus.nodeAssignment" | nindent 2 }}
+  {{- if .Values.timeplusCli.securityContext }}
+  securityContext:
+  {{- toYaml .Values.timeplusCli.securityContext | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml .Values.global.imagePullSecrets | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: timeplus-cli
+      image: {{ include "timeplus.fullImage" .Values.timeplusCli }}
+      {{- if .Values.timeplusCli.imagePullPolicy }}
+      imagePullPolicy: {{ .Values.timeplusCli.imagePullPolicy }}
+      {{- end }}
+      {{- if .Values.timeplusCli.resources }}
+      resources:
+        {{- toYaml .Values.timeplusCli.resources | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,42 @@
+{{- if .Values.timeplusd.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: timeplusd-user-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  z100-admin-user.yaml: |-
+    users:
+      {{ .Values.timeplusd.defaultAdminUsername }}:
+        access_management: 1
+        default_database: default
+        networks:
+          ip: ::/0
+        password: {{ .Values.timeplusd.defaultAdminPassword | quote }}
+
+  z200-extra-users.yaml: |-
+    {{- if .Values.timeplusd.extraUsers }}
+    {{- toYaml .Values.timeplusd.extraUsers | nindent 4 }}
+    {{- end }}
+
+  users.yaml: |-
+    profiles:
+      default:
+        load_balancing: random
+      query_profiler_cpu_time_period_ns: 100000000
+      query_profiler_real_time_period_ns: 100000000
+      readonly:
+        readonly: 1
+    quotas:
+      default:
+        interval:
+          duration: 3600
+          errors: 0
+          execution_time: 0
+          queries: 0
+          read_rows: 0
+          result_rows: 0
+
+{{- end }}

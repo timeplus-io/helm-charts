@@ -1,0 +1,30 @@
+{{- if .Values.timeplusAppserver.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: timeplus-appserver
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+data:
+  timeplus-appserver.yaml: |
+    timeplus-enterprise-version: v{{ .Chart.AppVersion }}
+    connector-addr: timeplus-connector:4196
+    connector-timeplusd-hostname: timeplusd-svc
+    timeplusd-addr: timeplusd-svc
+    server-internal-addr: 0.0.0.0
+    enable-access-log: true
+    enable-audit-log: true
+
+    auth-provider: proton
+    enable-authentication: true
+    enable-authorization: true
+    timeplusd-admin-username: {{ .Values.timeplusd.defaultAdminUsername | quote }}
+    timeplusd-admin-password: {{ .Values.timeplusd.defaultAdminPassword | quote }}
+    provision-ai: {{ .Values.timeplusAppserver.enabledAIService }}
+
+    {{- if .Values.timeplusAppserver.configs }}
+    {{- toYaml .Values.timeplusAppserver.configs | nindent 4 }}
+    {{- end }}
+
+{{- end }}

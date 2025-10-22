@@ -1,0 +1,44 @@
+{{- if .Values.timeplusd.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: timeplusd-svc
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusd.labels }}
+    {{- toYaml .Values.timeplusd.labels | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.timeplusd.service.type }}
+  {{- if .Values.timeplusd.service.clusterIP }}
+  clusterIP: {{ .Values.timeplusd.service.clusterIP }}
+  {{- end }}
+  selector:
+    {{- include "timeplus.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: timeplusd
+  ports:
+  - name: http-streaming
+    port: 3218
+    protocol: TCP
+    targetPort: 3218
+  - name: http-snapshot
+    port: 8123
+    protocol: TCP
+    targetPort: 8123
+  - name: tcp-streaming
+    port: 8463
+    protocol: TCP
+    targetPort: 8463
+    {{- if eq .Values.timeplusd.service.type "NodePort" }}
+    nodePort: {{ .Values.timeplusd.service.nodePort }}
+    {{- end }}
+  - name: tcp-snapshot
+    port: 7587
+    protocol: TCP
+    targetPort: 7587
+  - name: metrics
+    port: 9363
+    protocol: TCP
+    targetPort: 9363
+{{- end }}

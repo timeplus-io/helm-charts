@@ -1,0 +1,22 @@
+{{- if .Values.timeplusConnector.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: timeplus-connector
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusConnector.labels }}
+    {{- toYaml .Values.timeplusConnector.labels | nindent 4 }}
+    {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "timeplus.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: timeplus-connector
+  ports:
+  - name: http
+    port: 4196
+    protocol: TCP
+    targetPort: 4196
+{{- end }}

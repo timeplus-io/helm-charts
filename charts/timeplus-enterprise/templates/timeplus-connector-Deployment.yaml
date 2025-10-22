@@ -1,0 +1,108 @@
+{{- if .Values.timeplusConnector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeplus-connector
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.timeplusConnector.labels }}
+    {{- toYaml .Values.timeplusConnector.labels | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "timeplus.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: timeplus-connector
+  template:
+    metadata:
+      annotations:
+        k8s.timeplus.io/config-sha: {{ include (print $.Template.BasePath "/timeplus-connector-ConfigMap.yaml") . | sha256sum }}
+        {{- if .Values.timeplusConnector.annotations }}
+        {{- toYaml .Values.timeplusConnector.annotations | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "timeplus.podLabels" . | nindent 8 }}
+        {{- if .Values.timeplusConnector.labels }}
+        {{- toYaml .Values.timeplusConnector.labels | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/component: timeplus-connector
+    spec:
+      {{- dict "global" .Values.global "self" .Values.timeplusConnector | include "timeplus.nodeAssignment" | nindent 6 }}
+      {{- if .Values.timeplusConnector.securityContext }}
+      securityContext:
+      {{- toYaml .Values.timeplusConnector.securityContext | nindent 8 }}
+      {{- end }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: timeplus-connector
+        image: {{ include "timeplus.fullImage" .Values.timeplusConnector }}
+        {{- if .Values.timeplusConnector.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.timeplusConnector.imagePullPolicy }}
+        {{- end }}
+        env:
+        - name: NEUTRON_ADDRESS
+          value: timeplus-appserver:8081
+        - name: WORKSPACE_ID
+          value: default
+        - name: TIMEPLUS_CONNECTOR_PORT
+          value: "4196"
+        {{- if .Values.timeplusConnector.configMap }}
+        - name: BENTHOS_CONFIG_PATH
+          value: /etc/connector/server.yaml
+        {{- end }}
+        {{- if .Values.timeplusConnector.resources }}
+        resources:
+          {{- toYaml .Values.timeplusConnector.resources | nindent 10 }}
+        {{- end }}
+        ports:
+        - containerPort: 4196
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /etc/connector
+          name: timeplus-connector-configs
+          readOnly: true
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorContainer" .Values.prometheus_metrics.vector | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusConnector.extraContainers }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+      volumes:
+      - name: timeplus-connector-configs
+        projected:
+          sources:
+          - configMap:
+              name: timeplus-connector
+    {{- if .Values.prometheus_metrics.enabled }}
+    {{- include "timeplus.vectorVolume" "connector.toml" | nindent 6 }}
+    {{- end }}
+    {{- with .Values.timeplusConnector.extraVolumes }}
+    {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

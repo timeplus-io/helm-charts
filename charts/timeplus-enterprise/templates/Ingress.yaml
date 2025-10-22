@@ -1,0 +1,59 @@
+{{- if or .Values.ingress.timeplusd.enabled .Values.ingress.appserver.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: timeplus
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "timeplus.labels" . | nindent 4 }}
+    {{- if .Values.ingress.labels }}
+    {{- toYaml .Values.ingress.labels | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls: 
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+  {{- if .Values.ingress.appserver.enabled }}
+    - http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: timeplus-appserver
+              port:
+                name: http
+      {{ if .Values.ingress.appserver.domain }}host: {{ .Values.ingress.appserver.domain }}{{ end }}
+  {{- end }}
+  {{- if .Values.ingress.timeplusd.enabled }}
+    - http:
+        paths:
+          - path: /proton
+            pathType: Prefix
+            backend:
+              service:
+                name: timeplusd-svc
+                port:
+                  name: http-streaming
+          - path: /timeplusd
+            pathType: Prefix
+            backend:
+              service:
+                name: timeplusd-svc
+                port:
+                  name: http-streaming
+          - path: {{ .Values.ingress.timeplusd.httpSnapshotPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: timeplusd-svc
+                port:
+                  name: http-snapshot
+      {{ if .Values.ingress.timeplusd.domain }}host: {{ .Values.ingress.timeplusd.domain }}{{ end }}
+  {{- end }}
+{{- end }}
