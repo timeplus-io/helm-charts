@@ -16,9 +16,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: extract version
+        id: var
+        shell: bash
+        run: |
+          version=$(echo "${{ github.ref_name }}" | sed -E 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
+          echo "version=${version}" >> $GITHUB_OUTPUT
       - name: Build helm chart
         run: |
-          helm package -u ./charts/timeplus-enterprise --version ${{ github.ref_name }}
+          helm package -u ./charts/timeplus-enterprise --version ${{ steps.var.outputs.version }}
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -45,7 +51,7 @@ jobs:
         with:
           path: install
           token: ${{ secrets.GH_ACCESS_TOKEN }}
-          branch: 'helm/${{ github.ref_name }}'
-          title: 'helm: ${{ github.ref_name }}'
-          commit-message: 'helm: ${{ github.ref_name }}'
+          branch: 'helm/${{ steps.var.outputs.version }}'
+          title: 'helm: ${{ steps.var.outputs.version }}'
+          commit-message: 'helm: ${{ steps.var.outputs.version }}'
           body: 'created by helm-charts CI: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
