@@ -1,0 +1,23 @@
+provision:
+  enabled: false
+
+timeplusd:
+  resources:
+    limits:
+      cpu: '1'
+      memory: '2Gi'
+    requests:
+      cpu: '1'
+      memory: 2Gi
+
+  storage:
+    log:
+      enabled: false
+    stream:
+      className: ebs-gp3-basic-auto-delete
+      size: 10Gi
+      selector: null
+    history:
+      className: ebs-gp3-basic-auto-delete
+      size: 10Gi
+      selector: null
