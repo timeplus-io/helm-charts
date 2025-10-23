@@ -102,7 +102,7 @@ jobs:
 
           pushd neutron-ft/tests/functional
           go run github.com/onsi/ginkgo/v2/ginkgo --procs=1 --compilers=2 \
-            --label-filter "!singlenode" \
+            --label-filter "!cloud && !singlenode" \
             --randomize-all --randomize-suites \
             --keep-going --trace -- \
             --enable-auth \
