@@ -2,14 +2,13 @@ name: Timeplus Enterprise Helm chart test
 on:
   push:
     branches:
-      - 'develop'
       - 'release/v*'
-      - 'feature/ci'
     tags:
       - 'timeplus-enterprise-v[0-9]+.[0-9]+.[0-9]+'
     paths:
       - 'charts/timeplus-enterprise/**'
       - '.github/workflows/test-timeplus-enterprise.yml'
+      - 'ci/aws_enterprise_values.yaml'
 jobs:
   test-on-dev-cluster:
     name: Run test on dev cluster
