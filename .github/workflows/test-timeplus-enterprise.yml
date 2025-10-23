@@ -1,0 +1,153 @@
+name: Timeplus Enterprise Helm chart test
+on:
+  push:
+    branches:
+      - 'release/v*'
+    tags:
+      - 'timeplus-enterprise-v[0-9]+.[0-9]+.[0-9]+'
+    paths:
+      - 'charts/timeplus-enterprise/**'
+      - '.github/workflows/test-timeplus-enterprise.yml'
+      - 'ci/aws_enterprise_values.yaml'
+jobs:
+  test-on-dev-cluster:
+    name: Run test on dev cluster
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: vars
+        name: Set variables
+        run: |
+          TEST_VERSION="v$(cat charts/timeplus-enterprise/values.yaml | yq .timeplusAppserver.tag)"
+          echo "TEST_VERSION=${TEST_VERSION}" >> $GITHUB_OUTPUT
+
+          NAMESPACE="timeplus-ci-helm-charts-${{ github.run_id }}"
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_OUTPUT
+
+      - name: Print vars
+        run: |
+          echo "NAMESPACE: ${{ steps.vars.outputs.NAMESPACE }}"
+          echo "TEST_VERSION: ${{ steps.vars.outputs.TEST_VERSION }}"
+
+      - name: Checkout Neutron FT
+        uses: actions/checkout@v4
+        with:
+          repository: timeplus-io/neutron
+          ref: ${{ steps.vars.outputs.TEST_VERSION}}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          path: neutron-ft
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Download kubectl and helm
+        run: |
+          echo "Download kubectl"
+          curl -Lo ./kubectl https://storage.googleapis.com/kubernetes-release/release/v1.22.12/bin/linux/amd64/kubectl
+          chmod +x kubectl
+          mv ./kubectl /usr/local/bin/kubectl
+          kubectl version --client --output=yaml
+
+          echo "Download Helm"
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+
+      - name: Update Kube Config
+        run: |
+          aws eks update-kubeconfig --region us-west-2 --name dev
+
+      - name: Create NS
+        id: create-ns
+        continue-on-error: true
+        run: |
+          set -e
+          EXIT_CODE=0
+          kubectl get ns ${{ steps.vars.outputs.NAMESPACE }} || EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 0 ]; then
+              echo "NS_EXIST=true" >> $GITHUB_OUTPUT
+              exit 1
+          else
+              echo "NS_EXIST=false" >> $GITHUB_OUTPUT
+              kubectl create ns ${{ steps.vars.outputs.NAMESPACE }}
+          fi
+
+      - name: Deploy helm to eks
+        run: |
+          helm -n ${{ steps.vars.outputs.NAMESPACE }} install -f ./ci/aws_enterprise_values.yaml --wait --wait-for-jobs --timeout 10m timeplus ./charts/timeplus-enterprise
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+
+      - name: Run test
+        run: |
+          sleep 10
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} port-forward service/timeplus-appserver 8000:8000 &>/dev/null &
+
+          while [ $(curl -iL localhost:8000/default/api/info -o /dev/null -w '%{http_code}' -s) != "200" ] 
+          do
+            echo "checking neutron"
+            sleep 1
+          done
+          sleep 5
+
+          pushd neutron-ft/tests/functional
+          go run github.com/onsi/ginkgo/v2/ginkgo --procs=1 --compilers=2 \
+            --label-filter "!cloud && !singlenode" \
+            --randomize-all --randomize-suites \
+            --keep-going --trace -- \
+            --enable-auth \
+            --user-name=timeplus_user \
+            --user-password=changeme \
+            --create-trial-license=true \
+            -server-addr="localhost:8000"
+          popd
+
+      - name: Dump logs
+        if: ${{ always() }}
+        run: |
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} get pods -oyaml > pods.yaml
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs -l app.kubernetes.io/component=timeplus-appserver --all-containers=true --tail=-1 > appserver.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-0 > timeplusd-0.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-1 > timeplusd-1.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-2 > timeplusd-2.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs -l app.kubernetes.io/component=timeplus-connector --all-containers=true --tail=-1 > connector.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} get events > events.log
+
+      - name: Archive logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            pods.yaml
+            appserver.log
+            timeplusd-0.log
+            timeplusd-1.log
+            timeplusd-2.log
+            connector.log
+            events.log
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          helm -n ${{ steps.vars.outputs.NAMESPACE }} uninstall timeplus
+          sleep 30
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} delete pvc --all
+
+      - name: Delete NS
+        if: ${{ always() }}
+        run: |
+          if [ ${{ steps.create-ns.outputs.NS_EXIST }} = true ]; then
+            echo "NS exists, do not delete"
+          else
+            kubectl delete ns ${{ steps.vars.outputs.NAMESPACE }}
+          fi

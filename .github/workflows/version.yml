@@ -1,0 +1,120 @@
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The release tag of Timeplus Enterprise (e.g. v2.8.1)'
+        required: true
+        type: string
+      pre_release:
+        description: 'Whether this is a pre release. If it is checked, the PR to update helm chart on install.timeplus.com repo will be SKIPPED'
+        required: false
+        type: boolean
+
+name: Bump Timeplus Enterprise version
+jobs:
+  bump:
+    name: Bump Timeplus Enterprise version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: Process variables
+        id: var
+        shell: bash
+        run: |
+          major=$(echo "${{ inputs.tag }}" | cut -d '.' -f 1)
+          minor=$(echo "${{ inputs.tag }}" | cut -d '.' -f 2)
+          if [ "$major" == "v3" ]; then
+            # TPE v3.0 -> Helm v10.0
+            ((chart_major=$minor+10))
+          else 
+            echo "This major version ${major} is not supported "
+            exit 1
+          fi
+
+          chart_branch="release/v$chart_major.0"
+          echo "Using branch $chart_branch for TPE ${{ inputs.tag }}"
+          echo "chart_branch=${chart_branch}" >> $GITHUB_OUTPUT
+          echo "chart_major=${chart_major}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.var.outputs.chart_branch }}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Checkout TPE
+        uses: actions/checkout@v4
+        with:
+          path: timeplus-enterprise
+          repository: timeplus-io/timeplus-enterprise
+          ref: refs/tags/${{ inputs.tag }}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+
+      - name: Install tools
+        shell: bash
+        run: |
+          pushd /tmp
+          wget https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz
+          tar -xvf helm-docs_1.14.2_Linux_x86_64.tar.gz
+          sudo mv helm-docs /usr/local/sbin
+          popd
+
+      - name: Update chart
+        id: update
+        shell: bash
+        run: |
+          VERSION_FILE="./timeplus-enterprise/.env"
+          cat "$VERSION_FILE"
+
+          while IFS='=' read -r component version; do
+            if [[ -n "$component" && -n "$version" ]]; then
+              if [ "${component}" = "ORBIT_VERSION" ]; then
+                LINE=$(yq '.timeplusConnector.tag | line' ./charts/timeplus-enterprise/values.yaml)
+                sed -i "${LINE}s/.*/  tag: $version/" "./charts/timeplus-enterprise/values.yaml"
+              elif [ "${component}" = "NEUTRON_VERSION" ]; then
+                LINE=$(yq '.timeplusAppserver.tag | line' ./charts/timeplus-enterprise/values.yaml)
+                sed -i "${LINE}s/.*/  tag: $version/" "./charts/timeplus-enterprise/values.yaml"
+              elif [ "${component}" = "PROTON_VERSION" ]; then
+                LINE=$(yq '.timeplusd.tag | line' ./charts/timeplus-enterprise/values.yaml)
+                sed -i "${LINE}s/.*/  tag: $version/" "./charts/timeplus-enterprise/values.yaml"
+              elif [ "${component}" = "TIMEPLUS_CLI_VERSION" ]; then
+                LINE=$(yq '.timeplusCli.tag | line' ./charts/timeplus-enterprise/values.yaml)
+                sed -i "${LINE}s/.*/  tag: $version/" "./charts/timeplus-enterprise/values.yaml"
+              elif [ "${component}" = "VERSION" ]; then
+                sed -i "8s/.*/appVersion: $version/" "./charts/timeplus-enterprise/Chart.yaml"
+                echo "app_version=v$(echo $version)" >> $GITHUB_OUTPUT
+              fi
+            fi
+          done < "$VERSION_FILE"
+          rm -rf ./timeplus-enterprise
+          make docs
+          git status
+
+      # remote: Write access to repository not granted.
+      # is reported when using `GH_ACCESS_TOKEN`
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'feat(timeplus-enterprise): app ${{ steps.update.outputs.app_version}}'
+
+      - name: Find version
+        id: version
+        run: |
+          echo "Timeplus Enterprise Release: https://github.com/timeplus-io/timeplus-enterprise/releases/tag/${{ inputs.tag }}" > release_note.txt
+          make versions >> release_note.txt
+
+          next_version=$(echo $(git describe --tags) | awk -F. -v OFS=. '{$NF += 1 ; print}')
+          echo "next_version=${next_version}" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          target_commitish: ${{ steps.var.outputs.chart_branch }}
+          tag_name: ${{ steps.version.outputs.next_version }}
+          name: ${{ steps.version.outputs.next_version }}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          body_path: release_note.txt
+          prerelease: ${{ inputs.pre_release }}
