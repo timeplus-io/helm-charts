@@ -24,7 +24,7 @@ jobs:
           TEST_VERSION="v$(cat charts/timeplus-enterprise/values.yaml | yq .timeplusAppserver.tag)"
           echo "TEST_VERSION=${TEST_VERSION}" >> $GITHUB_OUTPUT
 
-          NAMESPACE="timeplus-ci-helm-charts-${{ github.run_id }}""
+          NAMESPACE="timeplus-ci-helm-charts-${{ github.run_id }}"
           echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_OUTPUT
 
       - name: Print vars
