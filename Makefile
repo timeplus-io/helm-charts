@@ -22,6 +22,7 @@ tool:
 
 docs:
 	helm-docs -c ./charts -g charts/timeplus-enterprise
+	helm-docs -c ./charts -g charts/timeplus-proton
 
 versions:
 	@echo "CONNECTOR_VERSION=$$(cat charts/timeplus-enterprise/values.yaml | yq .timeplusConnector.tag)"
