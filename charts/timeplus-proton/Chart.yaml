@@ -1,10 +1,11 @@
 apiVersion: v2
-name: proton
+name: timeplus-proton
+icon: https://timeplus.io/1_SYMBOL_B.png
 description: A Helm chart for Proton
-home: https://github.com/timeplus-io/proton
-maintainers:
-  - name: Timeplus engineers
-    email: eng@timeplus.com
+type: application
+version: 1.0.0
+appVersion: '3.0.3'
+kubeVersion: '>= 1.25.0-0'
 keywords:
   - timeplus
   - realtime
@@ -12,9 +13,9 @@ keywords:
   - analytics
   - monitoring
   - SQL
-
-type: application
-
-version: 1.0.0
-
-appVersion: '3.0.3'
+home: https://www.timeplus.com/
+sources:
+  - https://github.com/timeplus-io/proton
+maintainers:
+  - name: Timeplus engineers
+    email: eng@timeplus.com
