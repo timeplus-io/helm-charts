@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proton-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "proton.labels" . | nindent 4 }}
+data:
+  default-config.yaml: |-
+{{ .Files.Get "resources/proton/config.yaml" | indent 4 }}
+  custom-config.yaml: |-
+{{ if .Values.config }}
+{{ toYaml .Values.config | indent 4 }}
+{{ end }}

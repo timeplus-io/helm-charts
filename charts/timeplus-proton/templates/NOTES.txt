@@ -1,0 +1,6 @@
+Proton service is exposed via {{ .Values.service.type }}
+{{- if eq .Values.service.type "NodePort" }}
+You can `curl http://<host>:30218/proton/info` to call proton rest endpoint or use `proton client --host <host> --port 30863` to run SQL directly
+{{ else if eq .Values.service.type "ClusterIP" }}
+You can `curl http://proton-svc:3218/proton/info` to call proton rest endpoint or use `proton client --host proton-svc --port 3218` to run SQL directly on another pod within the cluster
+{{- end }}

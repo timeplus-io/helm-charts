@@ -1,0 +1,5 @@
+logger:
+  level: information
+  console: 1
+  log: ''
+  errorlog: ''
