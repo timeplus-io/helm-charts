@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: proton
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "proton.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: proton-svc
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      {{- include "proton.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/name: proton
+  template:
+    metadata:
+      labels:
+        {{- include "proton.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: proton
+      annotations:
+        k8s.timeplus.io/config-sha: {{ include (print $.Template.BasePath "/configMap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        fsGroup: 101
+      containers:
+      - name: proton
+        image: {{ include "proton.fullImage" .Values }}
+        {{- if .Values.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        {{- end }}
+        command:
+          - "/entrypoint.sh"
+        ports:
+          - name: http-streaming
+            containerPort: 3218
+            protocol: TCP
+          - name: http-snapshot
+            containerPort: 8123
+            protocol: TCP
+          - name: tcp-streaming
+            containerPort: 8463
+            protocol: TCP
+          - name: tcp-internal
+            containerPort: 8464
+            protocol: TCP
+          - name: tcp-snapshot
+            containerPort: 7587
+            protocol: TCP
+          - name: metrics
+            containerPort: 9363
+            protocol: TCP    
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /proton/ping
+            port: http-streaming
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          exec:
+            command:
+            - proton-client
+            - -h
+            - 127.0.0.1
+            - -q
+            - SELECT 1
+          failureThreshold: 3
+          initialDelaySeconds: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        {{- if .Values.resources }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: proton-data
+          mountPath: /var/lib/proton
+        - name: proton-config
+          mountPath: /etc/proton-server/config.d/z100-default-config.yaml
+          subPath: default-config.yaml
+        - name: proton-config
+          mountPath: /etc/proton-server/config.d/z300-custom-config.yaml
+          subPath: custom-config.yaml
+      volumes:
+      - name: proton-config
+        configMap:
+          name: proton-config
+          defaultMode: 0777
+  volumeClaimTemplates:
+  - metadata:
+      name: proton-data
+    spec:
+      {{- with .Values.storage }}
+      storageClassName: {{ .className }}
+      accessModes:
+      - {{ default .accessMode "ReadWriteOnce" }}
+      volumeMode: Filesystem
+      {{- with .selector }}
+      selector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .size }}
+      {{- end }}

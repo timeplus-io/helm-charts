@@ -1,0 +1,20 @@
+apiVersion: v2
+name: proton
+description: A Helm chart for Proton
+home: https://github.com/timeplus-io/proton
+maintainers:
+  - name: Timeplus engineers
+    email: eng@timeplus.com
+keywords:
+  - timeplus
+  - realtime
+  - streaming
+  - analytics
+  - monitoring
+  - SQL
+
+type: application
+
+version: 1.0.0
+
+appVersion: '3.0.3'

@@ -1,0 +1,25 @@
+imagePullPolicy: IfNotPresent
+imageRegistry: d.timeplus.com
+image: timeplus-io/proton
+tag: 3.0.3
+
+config: {}
+
+service:
+  type: NodePort
+
+  nodePorts:
+    httpStreaming: 30218
+    httpSnapshot: 30123
+    tcpStreaming: 30863
+    tcpSnapshot: 30587
+    metrics: 30363
+
+storage:
+  className: local-storage
+  size: 10Gi
+  selector:
+    matchLabels:
+      app: proton
+
+resources: {}
