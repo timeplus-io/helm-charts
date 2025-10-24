@@ -20,7 +20,7 @@ jobs:
         id: var
         shell: bash
         run: |
-          version=$(echo "${{ github.ref_name }}" | sed -E 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
+          version=$(echo "${{ github.ref_name }}" | sed -E 's/.*-(v[0-9]+\.[0-9]+\.[0-9]+)$/\1/')
           echo "version=${version}" >> $GITHUB_OUTPUT
       - name: Build helm chart
         run: |
