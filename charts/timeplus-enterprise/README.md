@@ -1,6 +1,6 @@
 # Introduction
 
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.1.2-rc.5](https://img.shields.io/badge/AppVersion-3.1.2--rc.5-informational?style=flat-square)
+![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.1.3-rc.0](https://img.shields.io/badge/AppVersion-3.1.3--rc.0-informational?style=flat-square)
 
 Please refer to https://docs.timeplus.com/k8s-helm
 
