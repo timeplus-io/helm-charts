@@ -6,8 +6,7 @@ data:
 
   # below changes from: https://github.com/timeplus-io/gravity/pull/57/files
   server:
-    # connection_max_idle_ms = 0 means no idle timeout management for connections
-    connection_max_idle_ms: 4000
+    connection_max_idle_ms = 0 # 0 means no idle timeout management for connections
 
     # Number of network socket server per IP / Port
     # The network thread reads requests from the network
