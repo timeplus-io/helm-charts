@@ -233,7 +233,7 @@ timeplusd:
   sleep: false
 
   # @ignored
-  tag: v3.2.5
+  tag: 3.2.5
   # @ignored
   imageRegistry: *globalImageRegistry
   # @ignored
