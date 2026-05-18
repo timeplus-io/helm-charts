@@ -206,6 +206,9 @@ spec:
         - name: timeplusd-user-config
           mountPath: /etc/timeplusd-server/users.yaml
           subPath: users.yaml
+        {{- with .Values.timeplusd.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     {{- if .Values.prometheus_metrics.enabled }}
     {{- include "timeplus.vectorContainer" .Values.prometheus_metrics.vector | nindent 6 }}
     {{- end }}
@@ -280,4 +283,7 @@ spec:
         requests:
           storage: {{ .size }}
       {{- end }}
+  {{- with .Values.timeplusd.extraVolumeClaimTemplates }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
 {{- end }}
