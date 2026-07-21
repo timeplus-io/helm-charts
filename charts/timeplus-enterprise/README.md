@@ -1,6 +1,6 @@
 # Introduction
 
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.1.3](https://img.shields.io/badge/AppVersion-3.1.3-informational?style=flat-square)
+![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.3.1-rc.20](https://img.shields.io/badge/AppVersion-3.3.1--rc.20-informational?style=flat-square)
 
 Please refer to https://docs.timeplus.com/k8s-helm
 
@@ -51,6 +51,8 @@ Please refer to https://docs.timeplus.com/k8s-helm
 | timeplusd.extraEnvs | list | `[]` | Extra environment variables |
 | timeplusd.extraInitContainers | list | `[]` | Extra init containers. It will be run before other init containers. |
 | timeplusd.extraUsers | object | `{}` | Extra users |
+| timeplusd.extraVolumeClaimTemplates | list | `[]` | Extra volumeClaimTemplates for the StatefulSet |
+| timeplusd.extraVolumeMounts | list | `[]` | Extra volume mounts for the timeplusd container |
 | timeplusd.extraVolumes | list | `[]` | Extra volumes that to be mounted |
 | timeplusd.image | string | `"timeplus/timeplusd"` |  |
 | timeplusd.initJob.image | string | `"timeplus/boson"` |  |
