@@ -66,7 +66,7 @@ timeplusAppserver:
   replicas: 1
 
   # @ignored
-  tag: 3.2.3
+  tag: 3.2.4
   # @ignored
   imageRegistry: *globalImageRegistry
   # @ignored
@@ -239,7 +239,7 @@ timeplusd:
   sleep: false
 
   # @ignored
-  tag: 3.3.1-rc.21
+  tag: 3.3.1-rc.23
   # @ignored
   imageRegistry: *globalImageRegistry
   # @ignored
