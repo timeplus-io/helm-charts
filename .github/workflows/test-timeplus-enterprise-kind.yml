@@ -1,0 +1,117 @@
+# Parallel-run kind variant of test-timeplus-enterprise.yml (issue #19).
+# Runs the same chart deploy + neutron functional tests on a disposable kind
+# cluster on the GitHub-hosted runner — no AWS credentials, no shared cluster.
+# During burn-in both workflows run side by side; once kind results match the
+# EKS results (~10 runs / 1 week), a follow-up PR removes the EKS variant.
+name: Timeplus Enterprise Helm chart test (kind)
+on:
+  push:
+    branches:
+      - 'release/v*'
+    tags:
+      - 'timeplus-enterprise-v[0-9]+.[0-9]+.[0-9]+'
+    paths:
+      - 'charts/timeplus-enterprise/**'
+      - '.github/workflows/test-timeplus-enterprise-kind.yml'
+      - 'ci/kind_values.yaml'
+  workflow_dispatch:
+jobs:
+  test-on-kind:
+    name: Run test on kind cluster
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: vars
+        name: Set variables
+        run: |
+          TEST_VERSION="v$(cat charts/timeplus-enterprise/values.yaml | yq .timeplusAppserver.tag)"
+          echo "TEST_VERSION=${TEST_VERSION}" >> $GITHUB_OUTPUT
+
+          NAMESPACE="timeplus-ci-helm-charts-${{ github.run_id }}"
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_OUTPUT
+
+      - name: Print vars
+        run: |
+          echo "NAMESPACE: ${{ steps.vars.outputs.NAMESPACE }}"
+          echo "TEST_VERSION: ${{ steps.vars.outputs.TEST_VERSION }}"
+
+      - name: Checkout Neutron FT
+        uses: actions/checkout@v4
+        with:
+          repository: timeplus-io/neutron
+          ref: ${{ steps.vars.outputs.TEST_VERSION}}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          path: neutron-ft
+
+      # kubectl and helm are preinstalled on ubuntu-latest; kind-action creates
+      # the cluster and sets the kubeconfig context.
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: chart-test
+
+      - name: Create NS
+        run: |
+          kubectl create ns ${{ steps.vars.outputs.NAMESPACE }}
+
+      - name: Deploy helm to kind
+        run: |
+          helm -n ${{ steps.vars.outputs.NAMESPACE }} install -f ./ci/kind_values.yaml --wait --wait-for-jobs --timeout 15m timeplus ./charts/timeplus-enterprise
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+
+      - name: Run test
+        run: |
+          sleep 10
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} port-forward service/timeplus-appserver 8000:8000 &>/dev/null &
+
+          while [ $(curl -iL localhost:8000/default/api/info -o /dev/null -w '%{http_code}' -s) != "200" ]
+          do
+            echo "checking neutron"
+            sleep 1
+          done
+          sleep 5
+
+          pushd neutron-ft/tests/functional
+          go run github.com/onsi/ginkgo/v2/ginkgo --procs=1 --compilers=2 \
+            --label-filter "!cloud && !singlenode" \
+            --randomize-all --randomize-suites \
+            --keep-going --trace -- \
+            --enable-auth \
+            --user-name=timeplus_user \
+            --user-password=changeme \
+            --create-trial-license=true \
+            -server-addr="localhost:8000"
+          popd
+
+      - name: Dump logs
+        if: ${{ always() }}
+        run: |
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} get pods -oyaml > pods.yaml
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs -l app.kubernetes.io/component=timeplus-appserver --all-containers=true --tail=-1 > appserver.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-0 > timeplusd-0.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-1 > timeplusd-1.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs timeplusd-2 > timeplusd-2.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} logs -l app.kubernetes.io/component=timeplus-connector --all-containers=true --tail=-1 > connector.log
+          kubectl -n ${{ steps.vars.outputs.NAMESPACE }} get events > events.log
+
+      - name: Archive logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-kind
+          path: |
+            pods.yaml
+            appserver.log
+            timeplusd-0.log
+            timeplusd-1.log
+            timeplusd-2.log
+            connector.log
+            events.log
+
+      # No cleanup steps: the kind cluster and all its PVCs die with the runner.

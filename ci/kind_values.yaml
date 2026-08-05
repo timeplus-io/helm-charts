@@ -1,0 +1,28 @@
+# CI values for the kind-based chart test (test-timeplus-enterprise-kind.yml).
+# Mirror of aws_enterprise_values.yaml with:
+#  - storage on kind's local-path provisioner ("standard") instead of EBS
+#  - lower CPU/memory requests so 3 timeplusd replicas + appserver + connector
+#    fit a GitHub-hosted runner (4 vCPU / 16 GB); limits unchanged
+provision:
+  enabled: false
+
+timeplusd:
+  resources:
+    limits:
+      cpu: '1'
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  storage:
+    log:
+      enabled: false
+    stream:
+      className: standard
+      size: 10Gi
+      selector: null
+    history:
+      className: standard
+      size: 10Gi
+      selector: null
