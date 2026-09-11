@@ -13,6 +13,7 @@ Please refer to https://docs.timeplus.com/k8s-helm
 | imagePullPolicy | string | `"IfNotPresent"` |  |
 | imageRegistry | string | `"d.timeplus.com"` |  |
 | resources | object | `{}` |  |
+| service.enabled | boolean | `true` |  |
 | service.nodePorts.httpSnapshot | int | `30123` |  |
 | service.nodePorts.httpStreaming | int | `30218` |  |
 | service.nodePorts.metrics | int | `30363` |  |

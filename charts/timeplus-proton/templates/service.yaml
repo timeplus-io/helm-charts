@@ -1,3 +1,4 @@
+{{- if and .Values.service .Values.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -38,3 +39,4 @@ spec:
     targetPort: 9363
     nodePort: {{ .metrics }}
   {{- end }}
+{{- end }}
