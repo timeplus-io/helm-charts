@@ -3,3 +3,8 @@ Your Timeplus Enterprise stack is deployed! It may take a few minutes before all
 {{- if .Values.provision.enabled }}
 You can run `kubectl -n {{ .Release.Namespace }} get jobs` to check whether `timeplus-provision` is completed or not. Once this job is completed, you can start use Timeplus Enterprise.
 {{- end }}
+
+{{- if and .Values.timeplusAppserver.enabled (not .Values.timeplusAppserver.encryptionKey) (not .Values.timeplusAppserver.existingEncryptionKeySecret) }}
+
+WARNING: no encryption key is configured for the appserver. Credentials it stores (the Data Agent LLM API key, MCP server secrets) are sealed with a built-in default key that only obfuscates them. Set `timeplusAppserver.existingEncryptionKeySecret` (a Secret with key NEUTRON_ENCRYPTION_KEY) or `timeplusAppserver.encryptionKey` before storing real credentials, and back the key up: switching keys later means re-entering every stored credential.
+{{- end }}

@@ -47,6 +47,27 @@ spec:
         args:
         - --config
         - /timeplus/config/timeplus-appserver.yaml
+        {{- $key := .Values.timeplusAppserver.encryptionKey }}
+        {{- $existing := .Values.timeplusAppserver.existingEncryptionKeySecret }}
+        {{- if and $key $existing }}
+        {{- fail "timeplusAppserver.encryptionKey and timeplusAppserver.existingEncryptionKeySecret are mutually exclusive; set only one" }}
+        {{- end }}
+        {{- if or $key $existing .Values.timeplusAppserver.extraEnv }}
+        env:
+        {{- if or $key $existing }}
+        # Master key for credentials the appserver seals at rest (Data Agent
+        # LLM api_key, MCP server secrets). Without it the appserver falls
+        # back to a built-in default key that only obfuscates.
+        - name: NEUTRON_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ if $existing }}{{ $existing | quote }}{{ else }}timeplus-appserver-encryption-key{{ end }}
+              key: NEUTRON_ENCRYPTION_KEY
+        {{- end }}
+        {{- with .Values.timeplusAppserver.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.timeplusAppserver.resources }}
         resources:
           {{- toYaml .Values.timeplusAppserver.resources | nindent 10 }}
