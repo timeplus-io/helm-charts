@@ -1,5 +1,9 @@
 Your Timeplus Enterprise stack is deployed! It may take a few minutes before all the services are up and running.
 
+{{- if and .Values.timeplusAppserver.enabled .Values.timeplusAppserver.enableAgent }}
+Tabby is enabled. An admin configures its model under Tenant settings -> Tabby Agent; nothing runs in the engine until then.
+{{- end }}
+
 {{- if .Values.provision.enabled }}
 You can run `kubectl -n {{ .Release.Namespace }} get jobs` to check whether `timeplus-provision` is completed or not. Once this job is completed, you can start use Timeplus Enterprise.
 {{- end }}
