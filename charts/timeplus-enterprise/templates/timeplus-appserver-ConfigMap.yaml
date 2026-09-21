@@ -22,6 +22,7 @@ data:
     timeplusd-admin-username: {{ .Values.timeplusd.defaultAdminUsername | quote }}
     timeplusd-admin-password: {{ .Values.timeplusd.defaultAdminPassword | quote }}
     provision-ai: {{ .Values.timeplusAppserver.enabledAIService }}
+    enable-agent: {{ .Values.timeplusAppserver.enableAgent }}
 
     {{- if .Values.timeplusAppserver.configs }}
     {{- toYaml .Values.timeplusAppserver.configs | nindent 4 }}

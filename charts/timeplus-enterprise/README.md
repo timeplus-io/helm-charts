@@ -28,6 +28,7 @@ Please refer to https://docs.timeplus.com/k8s-helm
 | timeplusAppserver.configs | object | `{}` | Configurations for appserver. e.g. `enable-authentication: true`. See https://docs.timeplus.com/server_config#appserver |
 | timeplusAppserver.enabled | bool | `true` |  |
 | timeplusAppserver.enabledAIService | bool | `false` |  |
+| timeplusAppserver.enableAgent | bool | `true` | Enable the Tabby Data Agent (appserver `enable-agent`). Enabled is not configured: everything else — LLM endpoint and API key, SQL write mode, MCP servers — is set by an admin in the Console under Tenant settings → Tabby Agent, and nothing is provisioned in the engine until Tabby is first used. Set false to hide the feature entirely. |
 | timeplusAppserver.extraContainers | list | `[]` | Extra containers that to be run together with the main container. |
 | timeplusAppserver.extraVolumes | list | `[]` | Extra volumes that to be mounted |
 | timeplusAppserver.image | string | `"timeplus/timeplus-appserver"` |  |
