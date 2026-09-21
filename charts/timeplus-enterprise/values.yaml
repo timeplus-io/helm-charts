@@ -51,6 +51,15 @@ timeplusAppserver:
   # -- Configurations for appserver. e.g. `enable-authentication: true`. See https://docs.timeplus.com/server_config#appserver
   configs: {}
 
+  # -- Passphrase that encrypts Data Agent credentials (LLM API key, MCP server secrets) at rest. The chart stores it in a Secret and exports it to the appserver as `NEUTRON_ENCRYPTION_KEY`. Leave empty to use `existingEncryptionKeySecret` instead. With neither set, credentials are sealed with a built-in default key that only obfuscates them. Back the key up: losing it orphans every sealed credential, which must then be re-entered.
+  encryptionKey: ""
+
+  # -- Name of an existing Secret in the release namespace whose `NEUTRON_ENCRYPTION_KEY` key holds the passphrase. Preferred for production and GitOps, since the passphrase never enters a values file. Mutually exclusive with `encryptionKey`.
+  existingEncryptionKeySecret: ""
+
+  # -- Extra environment variables for the appserver container, as a list of EnvVar objects (e.g. `- name: FOO` / `value: bar`, or `valueFrom`).
+  extraEnv: []
+
   service:
     type: ClusterIP
     clusterIP: null
