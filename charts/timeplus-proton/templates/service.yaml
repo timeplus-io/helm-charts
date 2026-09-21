@@ -1,7 +1,8 @@
+{{- if and .Values.service .Values.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: proton-svc
+  name: {{ .Values.serviceName }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "proton.labels" . | nindent 4 }}
@@ -10,6 +11,7 @@ spec:
   selector:
     {{- include "proton.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/name: proton
+  {{- if eq .Values.service.type "NodePort"}}
   ports:
   {{- with .Values.service.nodePorts }}
   - name: http-streaming
@@ -38,3 +40,5 @@ spec:
     targetPort: 9363
     nodePort: {{ .metrics }}
   {{- end }}
+  {{- end }}
+{{- end }}
