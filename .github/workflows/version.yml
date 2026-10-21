@@ -96,20 +96,54 @@ jobs:
 
       # remote: Write access to repository not granted.
       # is reported when using `GH_ACCESS_TOKEN`
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Commit chart bump
+        id: commit
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'feat(timeplus-enterprise): app ${{ steps.update.outputs.app_version}}'
 
       - name: Find version
         id: version
+        if: steps.commit.outputs.changes_detected == 'true'
         run: |
           echo "Timeplus Enterprise Release: https://github.com/timeplus-io/timeplus-enterprise/releases/tag/${{ inputs.tag }}" > release_note.txt
           make versions >> release_note.txt
 
-          next_version=$(echo $(git describe --tags) | awk -F. -v OFS=. '{$NF += 1 ; print}')
+          # Scope the release tag to THIS chart's own major version
+          # (e.g. timeplus-enterprise-v14.0.*), instead of relying on
+          # `git describe --tags`, which returns whatever tag is nearest in
+          # the shared commit history regardless of which release/vN.0
+          # branch produced it. Sibling branches (release/v12.0,
+          # release/v13.0, ...) share ancestry and a flat tag namespace, so
+          # distance-based describe + blind "+1" on the last field can
+          # compute a tag name that another branch already claimed —
+          # action-gh-release then silently *updates* that unrelated
+          # release instead of creating a new one, and no `release:
+          # published` event fires. Scoping by chart_major makes tag names
+          # disjoint per branch, so collisions can't happen by construction.
+          prefix="timeplus-enterprise-v${{ steps.var.outputs.chart_major }}.0."
+
+          latest_patch=$(git tag -l "${prefix}*" \
+            | sed "s/^${prefix}//" \
+            | grep -E '^[0-9]+$' \
+            | sort -n | tail -1)
+
+          next_patch=$(( ${latest_patch:--1} + 1 ))
+          next_version="${prefix}${next_patch}"
+
+          # Safety net: if this tag name somehow already exists (e.g. a
+          # manually created tag), fail loudly instead of letting
+          # action-gh-release silently overwrite an unrelated release.
+          if git rev-parse -q --verify "refs/tags/${next_version}" >/dev/null; then
+            echo "::error::Computed tag ${next_version} already exists. Refusing to overwrite — investigate the tag namespace before retrying."
+            exit 1
+          fi
+
+          echo "Using next_version=${next_version} (chart_major=${{ steps.var.outputs.chart_major }}, previous patch=${latest_patch:-none})"
           echo "next_version=${next_version}" >> $GITHUB_OUTPUT
 
       - name: Create release
+        if: steps.commit.outputs.changes_detected == 'true'
         uses: softprops/action-gh-release@v2
         with:
           target_commitish: ${{ steps.var.outputs.chart_branch }}
@@ -118,3 +152,8 @@ jobs:
           token: ${{ secrets.GH_ACCESS_TOKEN }}
           body_path: release_note.txt
           prerelease: ${{ inputs.pre_release }}
+
+      - name: No changes detected
+        if: steps.commit.outputs.changes_detected != 'true'
+        run: |
+          echo "::notice::Chart was already up to date for ${{ inputs.tag }} on ${{ steps.var.outputs.chart_branch }} — nothing committed, no release created."
