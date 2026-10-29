@@ -22,12 +22,6 @@ jobs:
         run: |
           version=$(echo "${{ github.ref_name }}" | sed -E 's/.*-(v[0-9]+\.[0-9]+\.[0-9]+)$/\1/')
           echo "version=${version}" >> $GITHUB_OUTPUT
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build helm chart
         run: |
           helm package -u ./charts/timeplus-enterprise --version ${{ steps.var.outputs.version }}
